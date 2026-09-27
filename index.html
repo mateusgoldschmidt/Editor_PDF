@@ -27,9 +27,11 @@
             transition: transform 0.2s;
         }
         .page-item.sortable-ghost { opacity: 0.4; transform: scale(0.95); }
-        .canvas-container {
-            transition: transform 0.3s ease;
-        }
+        
+        /* Classes dinâmicas para a proporção das miniaturas */
+        .aspect-portrait { aspect-ratio: 1 / 1.414; }
+        .aspect-landscape { aspect-ratio: 1.414 / 1; }
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -135,9 +137,13 @@
             delayOnTouchOnly: true
         });
 
+        // Eventos principais
         fileInput.addEventListener('change', handleFiles);
         clearBtn.addEventListener('click', clearAll);
         downloadBtn.addEventListener('click', generateFinalPDF);
+        
+        // Dispara a re-renderização visual quando a opção do select muda
+        pageFormatSelect.addEventListener('change', updateThumbnailsOrientation);
         
         rotateAllBtn.addEventListener('click', () => {
             const items = document.querySelectorAll('.page-item');
@@ -146,15 +152,48 @@
             items.forEach(item => {
                 const id = item.dataset.id;
                 let currentRot = pagesData[id].rotation;
-                currentRot = (currentRot + 90) % 360;
-                pagesData[id].rotation = currentRot;
-                
-                const img = item.querySelector('img');
-                const isLandscape = currentRot === 90 || currentRot === 270;
-                const scale = isLandscape ? 0.707 : 1;
-                img.style.transform = `rotate(${currentRot}deg) scale(${scale})`;
+                pagesData[id].rotation = (currentRot + 90) % 360;
             });
+            updateThumbnailsOrientation();
         });
+
+        // Função responsável por calcular e aplicar o formato correto nas miniaturas
+        function updateThumbnailsOrientation() {
+            const format = pageFormatSelect.value;
+            const items = document.querySelectorAll('.page-item');
+            
+            items.forEach(item => {
+                const id = item.dataset.id;
+                if (!pagesData[id]) return;
+                
+                const data = pagesData[id];
+                const container = item.querySelector('.canvas-container');
+                const img = item.querySelector('img');
+                
+                // Define a orientação base antes de considerar as rotações do usuário
+                let isLandscapeBase = false;
+                if (format === 'portrait') {
+                    isLandscapeBase = false;
+                } else if (format === 'landscape') {
+                    isLandscapeBase = true;
+                } else {
+                    isLandscapeBase = data.originalWidth > data.originalHeight;
+                }
+                
+                const rot = data.rotation || 0;
+                const isRotated90 = rot === 90 || rot === 270;
+                
+                // Inverte a proporção do retângulo da página se ela for girada
+                const isEffectiveLandscape = isRotated90 ? !isLandscapeBase : isLandscapeBase;
+                
+                container.classList.remove('aspect-portrait', 'aspect-landscape');
+                container.classList.add(isEffectiveLandscape ? 'aspect-landscape' : 'aspect-portrait');
+                
+                // Aplica a rotação real na imagem e corrige o preenchimento no CSS
+                const scale = isRotated90 ? 1.414 : 1;
+                img.style.transform = `rotate(${rot}deg) scale(${scale})`;
+            });
+        }
 
         function showLoading(text) {
             loadingText.innerText = text;
@@ -200,6 +239,8 @@
                 }
             }
 
+            // Atualiza as dimensões e proporções ao finalizar o carregamento de todos
+            updateThumbnailsOrientation();
             hideLoading();
             updateEmptyState();
             fileInput.value = '';
@@ -227,7 +268,9 @@
                         fileId: fileId,
                         bytes: bytes, 
                         pageIndex: i - 1,
-                        rotation: 0
+                        rotation: 0,
+                        originalWidth: viewport.width,
+                        originalHeight: viewport.height
                     };
 
                     createThumbnailElement(uniqueId, canvas.toDataURL());
@@ -239,19 +282,28 @@
         }
 
         async function processImage(bytes, mimeType, fileName) {
-            const blob = new Blob([bytes], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            
-            const uniqueId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
-            pagesData[uniqueId] = {
-                type: 'image',
-                mimeType: mimeType,
-                bytes: bytes,
-                rotation: 0
-            };
+            return new Promise((resolve) => {
+                const blob = new Blob([bytes], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                
+                const imgObj = new Image();
+                imgObj.onload = () => {
+                    const uniqueId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    pagesData[uniqueId] = {
+                        type: 'image',
+                        mimeType: mimeType,
+                        bytes: bytes,
+                        rotation: 0,
+                        originalWidth: imgObj.width,
+                        originalHeight: imgObj.height
+                    };
 
-            createThumbnailElement(uniqueId, url);
+                    createThumbnailElement(uniqueId, url);
+                    resolve();
+                };
+                imgObj.src = url;
+            });
         }
 
         function createThumbnailElement(id, imageUrl) {
@@ -260,7 +312,8 @@
             div.dataset.id = id;
 
             const imgContainer = document.createElement('div');
-            imgContainer.className = 'w-full aspect-[1/1.414] bg-white rounded-lg overflow-hidden flex items-center justify-center';
+            // A proporção (aspect-ratio) não é mais chumbada aqui; ela é gerenciada pela função updateThumbnailsOrientation
+            imgContainer.className = 'canvas-container w-full bg-white rounded-lg overflow-hidden flex items-center justify-center transition-all duration-300 shadow-inner';
             
             const img = document.createElement('img');
             img.src = imageUrl;
@@ -278,13 +331,8 @@
             rotateBtn.onclick = (e) => {
                 e.stopPropagation();
                 let currentRot = pagesData[id].rotation;
-                currentRot = (currentRot + 90) % 360;
-                pagesData[id].rotation = currentRot;
-                
-                const isLandscape = currentRot === 90 || currentRot === 270;
-                const scale = isLandscape ? 0.707 : 1;
-                
-                img.style.transform = `rotate(${currentRot}deg) scale(${scale})`;
+                pagesData[id].rotation = (currentRot + 90) % 360;
+                updateThumbnailsOrientation();
             };
 
             const deleteBtn = document.createElement('button');
@@ -345,14 +393,12 @@
                             img = await mergedPdf.embedPng(data.bytes);
                         }
 
-                        // Lógica inteligente de orientação do papel
                         let paperDims;
                         if (globalFormat === 'portrait') {
-                            paperDims = PageSizes.A4; // Força Retrato
+                            paperDims = PageSizes.A4; 
                         } else if (globalFormat === 'landscape') {
-                            paperDims = [PageSizes.A4[1], PageSizes.A4[0]]; // Força Paisagem
+                            paperDims = [PageSizes.A4[1], PageSizes.A4[0]]; 
                         } else {
-                            // Automático: Papel paisagem se a foto for mais larga que alta
                             paperDims = (img.width > img.height) ? [PageSizes.A4[1], PageSizes.A4[0]] : PageSizes.A4;
                         }
 
@@ -377,7 +423,6 @@
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
                 
-                // Define o nome do arquivo com base no input (remove espaços extras)
                 let customName = fileNameInput.value.trim();
                 if(!customName) customName = "Documento_Workspace";
                 
