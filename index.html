@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDF Workspace</title>
+    
+    <!-- Configurações PWA (Aplicativo) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/PDF_file_icon.svg/1200px-PDF_file_icon.svg.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Bibliotecas Externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+        .page-item {
+            touch-action: none; /* Melhora o drag and drop no mobile */
+            transition: transform 0.2s;
+        }
+        .page-item.sortable-ghost { opacity: 0.4; transform: scale(0.95); }
+        .canvas-container {
+            transition: transform 0.3s ease;
+        }
+        /* Esconde a barra de rolagem mas permite rolar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans">
+
+    <!-- Header / Barra de Ferramentas -->
+    <header class="bg-slate-800 border-b border-slate-700 p-4 flex flex-wrap justify-between items-center gap-4 shadow-md z-10">
+        <div class="flex items-center gap-2">
+            <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+            <h1 class="text-xl font-bold tracking-wide">PDF<span class="text-slate-400 font-light">Workspace</span></h1>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <label class="flex-1 sm:flex-none cursor-pointer bg-slate-700 hover:bg-slate-600 transition text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Adicionar
+                <input type="file" id="fileInput" multiple accept=".pdf, image/png, image/jpeg" class="hidden">
+            </label>
+            
+            <button id="clearBtn" class="flex-1 sm:flex-none bg-slate-800 border border-slate-600 hover:bg-slate-700 transition text-slate-300 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                Limpar
+            </button>
+            
+            <button id="downloadBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 transition text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/50">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Baixar Novo PDF
+            </button>
+        </div>
+    </header>
+
+    <!-- Área de Trabalho (Mesa de Luz) -->
+    <main class="flex-1 p-6 overflow-y-auto bg-slate-900 relative">
+        <!-- Estado Vazio -->
+        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none transition-opacity duration-300">
+            <svg class="w-20 h-20 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <p class="text-lg">Adicione PDFs ou Imagens para começar</p>
+            <p class="text-sm opacity-70 mt-1">Você pode reordenar arrastando as páginas</p>
+        </div>
+
+        <!-- Grid de Miniaturas -->
+        <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20">
+            <!-- As miniaturas serão injetadas aqui pelo JS -->
+        </div>
+    </main>
+
+    <!-- Overlay de Carregamento -->
+    <div id="loading" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="flex flex-col items-center">
+            <svg class="animate-spin h-10 w-10 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p id="loadingText" class="text-white font-medium">Processando...</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do PDF.js (usando worker via CDN)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Banco de dados em memória para guardar os arquivos reais
+        const pagesData = {}; 
+        let fileIdCounter = 0;
+
+        // Elementos DOM
+        const fileInput = document.getElementById('fileInput');
+        const grid = document.getElementById('grid');
+        const emptyState = document.getElementById('emptyState');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Inicializa o arrastar e soltar (Drag and Drop) para mobile e desktop
+        new Sortable(grid, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            delay: 150, // Delay ajuda no touch do celular para não arrastar acidentalmente ao tentar rolar a tela
+            delayOnTouchOnly: true
+        });
+
+        // Event Listeners
+        fileInput.addEventListener('change', handleFiles);
+        clearBtn.addEventListener('click', clearAll);
+        downloadBtn.addEventListener('click', generateFinalPDF);
+
+        function showLoading(text) {
+            loadingText.innerText = text;
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+        }
+
+        function hideLoading() {
+            loading.classList.add('hidden');
+            loading.classList.remove('flex');
+        }
+
+        function updateEmptyState() {
+            if (grid.children.length === 0) {
+                emptyState.style.opacity = '1';
+            } else {
+                emptyState.style.opacity = '0';
+            }
+        }
+
+        function clearAll() {
+            grid.innerHTML = '';
+            for (let prop in pagesData) delete pagesData[prop];
+            fileInput.value = '';
+            updateEmptyState();
+        }
+
+        async function handleFiles(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            showLoading('Lendo arquivos...');
+            
+            for (const file of files) {
+                const arrayBuffer = await file.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+                const currentFileId = `file_${fileIdCounter++}`;
+
+                if (file.type === 'application/pdf') {
+                    await processPDF(bytes, currentFileId);
+                } else if (file.type.startsWith('image/')) {
+                    await processImage(bytes, file.type, file.name);
+                }
+            }
+
+            hideLoading();
+            updateEmptyState();
+            fileInput.value = ''; // Reseta o input
+        }
+
+        async function processPDF(bytes, fileId) {
+            try {
+                // Usando getDocument com Uint8Array evita problemas de CORS locais
+                const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1.0 }); // Escala reduzida para miniatura mais leve
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                    const uniqueId = `page_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    // Salva os dados brutos na memória
+                    pagesData[uniqueId] = {
+                        type: 'pdf',
+                        fileId: fileId,
+                        bytes: bytes,
+                        pageIndex: i - 1, // pdf-lib usa base 0
+                        rotation: 0
+                    };
+
+                    createThumbnailElement(uniqueId, canvas.toDataURL());
+                }
+            } catch (error) {
+                console.error("Erro ao processar PDF:", error);
+                alert("Erro ao ler um dos arquivos PDF.");
+            }
+        }
+
+        async function processImage(bytes, mimeType, fileName) {
+            const blob = new Blob([bytes], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            
+            const uniqueId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            pagesData[uniqueId] = {
+                type: 'image',
+                mimeType: mimeType,
+                bytes: bytes,
+                rotation: 0
+            };
+
+            createThumbnailElement(uniqueId, url);
+        }
+
+        function createThumbnailElement(id, imageUrl) {
+            const div = document.createElement('div');
+            div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition';
+            div.dataset.id = id;
+
+            // Container da imagem para aplicar rotação visualmente
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'canvas-container w-full aspect-[1/1.414] bg-white rounded-lg overflow-hidden flex items-center justify-center'; // Proporção A4
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.className = 'max-w-full max-h-full object-contain pointer-events-none';
+            
+            imgContainer.appendChild(img);
+
+            // Botões de Ação (Aparecem no hover no PC, sempre no Mobile)
+            const actions = document.createElement('div');
+            actions.className = 'absolute top-4 right-4 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity';
+
+            // Botão Girar (Com SVG Explicito para evitar problemas de carregamento)
+            const rotateBtn = document.createElement('button');
+            rotateBtn.className = 'w-9 h-9 bg-slate-900/90 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow backdrop-blur-sm transition';
+            rotateBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>`;
+            rotateBtn.onclick = (e) => {
+                e.stopPropagation();
+                let currentRot = pagesData[id].rotation;
+                currentRot = (currentRot + 90) % 360;
+                pagesData[id].rotation = currentRot;
+                imgContainer.style.transform = `rotate(${currentRot}deg)`;
+            };
+
+            // Botão Excluir (Com SVG Explicito)
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'w-9 h-9 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow backdrop-blur-sm transition';
+            deleteBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                grid.removeChild(div);
+                delete pagesData[id];
+                updateEmptyState();
+            };
+
+            actions.appendChild(rotateBtn);
+            actions.appendChild(deleteBtn);
+            
+            div.appendChild(imgContainer);
+            div.appendChild(actions);
+            grid.appendChild(div);
+        }
+
+        async function generateFinalPDF() {
+            const items = document.querySelectorAll('.page-item');
+            if (items.length === 0) return alert("Nenhuma página para exportar.");
+
+            showLoading('Gerando PDF Final...');
+
+            try {
+                const { PDFDocument, degrees } = PDFLib;
+                const mergedPdf = await PDFDocument.create();
+                
+                // Cache de documentos lidos para não fazer parsing do mesmo arquivo PDF várias vezes
+                const pdfCache = {};
+
+                for (const item of items) {
+                    const id = item.dataset.id;
+                    const data = pagesData[id];
+
+                    if (data.type === 'pdf') {
+                        let srcDoc = pdfCache[data.fileId];
+                        if (!srcDoc) {
+                            srcDoc = await PDFDocument.load(data.bytes);
+                            pdfCache[data.fileId] = srcDoc;
+                        }
+
+                        const [copiedPage] = await mergedPdf.copyPages(srcDoc, [data.pageIndex]);
+                        
+                        // Aplica a rotação da interface somada à rotação original do PDF
+                        const currentRotation = copiedPage.getRotation().angle;
+                        copiedPage.setRotation(degrees(currentRotation + data.rotation));
+                        
+                        mergedPdf.addPage(copiedPage);
+                    } 
+                    else if (data.type === 'image') {
+                        let img;
+                        if (data.mimeType === 'image/jpeg') {
+                            img = await mergedPdf.embedJpg(data.bytes);
+                        } else {
+                            img = await mergedPdf.embedPng(data.bytes);
+                        }
+
+                        // Cria a página no tamanho da imagem
+                        const page = mergedPdf.addPage([img.width, img.height]);
+                        page.drawImage(img, {
+                            x: 0,
+                            y: 0,
+                            width: img.width,
+                            height: img.height,
+                        });
+                        
+                        page.setRotation(degrees(data.rotation));
+                    }
+                }
+
+                // Salva o arquivo final
+                const pdfBytes = await mergedPdf.save();
+                
+                // Lógica de download corrigida para funcionar localmente (Blob URL)
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Documento_Modificado.pdf';
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+
+            } catch (error) {
+                console.error("Erro ao gerar PDF:", error);
+                alert("Ocorreu um erro ao gerar o PDF final.");
+            }
+
+            hideLoading();
+        }
+
+        // PWA - Registro do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('Service Worker registrado!', reg);
+                }).catch(err => {
+                    console.log('Falha ao registrar Service Worker', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
