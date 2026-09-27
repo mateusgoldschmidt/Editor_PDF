@@ -1,0 +1,21 @@
+{
+  "name": "PDF Workspace",
+  "short_name": "PDF Tools",
+  "description": "Ferramenta local para juntar, girar e organizar PDFs e Imagens",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/PDF_file_icon.svg/192px-PDF_file_icon.svg.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/PDF_file_icon.svg/512px-PDF_file_icon.svg.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
