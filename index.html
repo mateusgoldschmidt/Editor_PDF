@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PDF Workspace</title>
     
-    <!-- Configurações PWA (Aplicativo) -->
+    <!-- Configurações PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e293b">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,11 +24,10 @@
         body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
         .page-item {
             touch-action: none; 
-            transition: transform 0.2s;
         }
         .page-item.sortable-ghost { opacity: 0.4; transform: scale(0.95); }
         
-        /* Classes dinâmicas para a proporção das miniaturas */
+        /* Aspect Ratios Perfeitos baseados na folha A4 */
         .aspect-portrait { aspect-ratio: 1 / 1.414; }
         .aspect-landscape { aspect-ratio: 1.414 / 1; }
         
@@ -42,8 +41,6 @@
 
     <!-- Header / Barra de Ferramentas -->
     <header class="bg-slate-800 border-b border-slate-700 p-4 flex flex-col gap-4 shadow-md z-10">
-        
-        <!-- Linha 1: Título e Nome do Arquivo -->
         <div class="flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-2">
                 <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
@@ -52,19 +49,17 @@
             
             <div class="flex items-center gap-2 w-full sm:w-auto bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-600 focus-within:border-blue-500 transition">
                 <span class="text-sm text-slate-400 hidden sm:block">Nome:</span>
-                <input type="text" id="fileNameInput" value="Documento_Modificado" class="flex-1 bg-transparent text-white focus:outline-none text-sm w-full sm:w-48 placeholder-slate-500" placeholder="Digite o nome do arquivo">
+                <input type="text" id="fileNameInput" value="Documento_Modificado" class="flex-1 bg-transparent text-white focus:outline-none text-sm w-full sm:w-48 placeholder-slate-500" placeholder="Nome do arquivo">
                 <span class="text-slate-400 font-medium text-sm">.pdf</span>
             </div>
         </div>
 
-        <!-- Linha 2: Controles de Orientação e Botões -->
         <div class="flex flex-wrap items-center justify-between gap-3">
-            
             <div class="w-full sm:w-auto">
                 <select id="pageFormat" class="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none transition cursor-pointer">
-                    <option value="auto">Folhas: Orientação Automática</option>
-                    <option value="portrait">Forçar Folhas: Retrato (A4)</option>
-                    <option value="landscape">Forçar Folhas: Paisagem (A4)</option>
+                    <option value="auto">Imagens: Orientação Automática</option>
+                    <option value="portrait">Forçar Imagens: Retrato (A4)</option>
+                    <option value="landscape">Forçar Imagens: Paisagem (A4)</option>
                 </select>
             </div>
             
@@ -137,13 +132,14 @@
             delayOnTouchOnly: true
         });
 
-        // Eventos principais
+        // Eventos
         fileInput.addEventListener('change', handleFiles);
         clearBtn.addEventListener('click', clearAll);
         downloadBtn.addEventListener('click', generateFinalPDF);
         
-        // Dispara a re-renderização visual quando a opção do select muda
-        pageFormatSelect.addEventListener('change', updateThumbnailsOrientation);
+        pageFormatSelect.addEventListener('change', () => {
+            Object.keys(pagesData).forEach(id => renderThumbnail(id));
+        });
         
         rotateAllBtn.addEventListener('click', () => {
             const items = document.querySelectorAll('.page-item');
@@ -151,48 +147,87 @@
             
             items.forEach(item => {
                 const id = item.dataset.id;
-                let currentRot = pagesData[id].rotation;
-                pagesData[id].rotation = (currentRot + 90) % 360;
+                pagesData[id].rotation = (pagesData[id].rotation + 90) % 360;
+                renderThumbnail(id);
             });
-            updateThumbnailsOrientation();
         });
 
-        // Função responsável por calcular e aplicar o formato correto nas miniaturas
-        function updateThumbnailsOrientation() {
-            const format = pageFormatSelect.value;
-            const items = document.querySelectorAll('.page-item');
+        // Função responsável por pré-renderizar a miniatura de forma 100% perfeita
+        function renderThumbnail(id) {
+            const data = pagesData[id];
+            if (!data) return;
             
-            items.forEach(item => {
-                const id = item.dataset.id;
-                if (!pagesData[id]) return;
-                
-                const data = pagesData[id];
-                const container = item.querySelector('.canvas-container');
-                const img = item.querySelector('img');
-                
-                // Define a orientação base antes de considerar as rotações do usuário
-                let isLandscapeBase = false;
+            const format = pageFormatSelect.value;
+            const rot = data.rotation || 0;
+
+            let paperW, paperH;
+            const A4_W = 595.28, A4_H = 841.89; // Dimensões exatas do pdf-lib
+
+            // PDFs preservam tamanho original. Imagens sofrem alteração do select.
+            if (data.type === 'pdf') {
+                paperW = data.originalWidth;
+                paperH = data.originalHeight;
+            } else {
                 if (format === 'portrait') {
-                    isLandscapeBase = false;
+                    paperW = A4_W; paperH = A4_H;
                 } else if (format === 'landscape') {
-                    isLandscapeBase = true;
+                    paperW = A4_H; paperH = A4_W;
                 } else {
-                    isLandscapeBase = data.originalWidth > data.originalHeight;
+                    if (data.originalWidth > data.originalHeight) {
+                        paperW = A4_H; paperH = A4_W;
+                    } else {
+                        paperW = A4_W; paperH = A4_H;
+                    }
                 }
-                
-                const rot = data.rotation || 0;
-                const isRotated90 = rot === 90 || rot === 270;
-                
-                // Inverte a proporção do retângulo da página se ela for girada
-                const isEffectiveLandscape = isRotated90 ? !isLandscapeBase : isLandscapeBase;
-                
-                container.classList.remove('aspect-portrait', 'aspect-landscape');
-                container.classList.add(isEffectiveLandscape ? 'aspect-landscape' : 'aspect-portrait');
-                
-                // Aplica a rotação real na imagem e corrige o preenchimento no CSS
-                const scale = isRotated90 ? 1.414 : 1;
-                img.style.transform = `rotate(${rot}deg) scale(${scale})`;
-            });
+            }
+
+            // Descobre o tamanho final do papel APÓS o giro
+            const isRotated90 = rot === 90 || rot === 270;
+            const finalW = isRotated90 ? paperH : paperW;
+            const finalH = isRotated90 ? paperW : paperH;
+
+            // Cria um canvas em segundo plano para desenhar a imagem
+            const canvas = document.createElement('canvas');
+            const thumbScale = 400 / Math.max(finalW, finalH); // Mantém a memória otimizada
+            canvas.width = finalW * thumbScale;
+            canvas.height = finalH * thumbScale;
+            const ctx = canvas.getContext('2d');
+
+            // Fundo Branco (Folha)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const img = new Image();
+            img.onload = () => {
+                ctx.save();
+                // Move o eixo para o meio da tela e aplica o giro no conteúdo
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((rot * Math.PI) / 180);
+
+                if (data.type === 'pdf') {
+                    // PDF preenche a folha
+                    ctx.drawImage(img, -(paperW * thumbScale) / 2, -(paperH * thumbScale) / 2, paperW * thumbScale, paperH * thumbScale);
+                } else {
+                    // Imagem é centralizada e encaixada na folha sem distorcer
+                    const scaleFactor = Math.min(paperW / data.originalWidth, paperH / data.originalHeight);
+                    const drawW = data.originalWidth * scaleFactor * thumbScale;
+                    const drawH = data.originalHeight * scaleFactor * thumbScale;
+                    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+                }
+                ctx.restore();
+
+                // Atualiza o HTML com a imagem processada (Sem usar CSS falso de rotação)
+                const item = document.querySelector(`.page-item[data-id="${id}"]`);
+                if (item) {
+                    const uiImg = item.querySelector('.thumb-img');
+                    uiImg.src = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    const container = item.querySelector('.canvas-container');
+                    container.classList.remove('aspect-portrait', 'aspect-landscape');
+                    container.classList.add(finalW > finalH ? 'aspect-landscape' : 'aspect-portrait');
+                }
+            };
+            img.src = data.rawImageUrl; // Carrega os dados nativos salvos no carregamento
         }
 
         function showLoading(text) {
@@ -239,8 +274,6 @@
                 }
             }
 
-            // Atualiza as dimensões e proporções ao finalizar o carregamento de todos
-            updateThumbnailsOrientation();
             hideLoading();
             updateEmptyState();
             fileInput.value = '';
@@ -252,14 +285,17 @@
                 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.0 });
+                    // Dimensão real do arquivo para matemática perfeita
+                    const viewportReal = page.getViewport({ scale: 1.0 });
+                    // Dimensão reduzida para não estourar a memória do navegador
+                    const viewportThumb = page.getViewport({ scale: 0.5 });
                     
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
+                    canvas.width = viewportThumb.width;
+                    canvas.height = viewportThumb.height;
 
-                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    await page.render({ canvasContext: ctx, viewport: viewportThumb }).promise;
 
                     const uniqueId = `page_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     
@@ -269,11 +305,13 @@
                         bytes: bytes, 
                         pageIndex: i - 1,
                         rotation: 0,
-                        originalWidth: viewport.width,
-                        originalHeight: viewport.height
+                        originalWidth: viewportReal.width,
+                        originalHeight: viewportReal.height,
+                        rawImageUrl: canvas.toDataURL('image/jpeg', 0.9)
                     };
 
-                    createThumbnailElement(uniqueId, canvas.toDataURL());
+                    createThumbnailElement(uniqueId);
+                    renderThumbnail(uniqueId);
                 }
             } catch (error) {
                 console.error("Erro ao processar PDF:", error);
@@ -296,28 +334,29 @@
                         bytes: bytes,
                         rotation: 0,
                         originalWidth: imgObj.width,
-                        originalHeight: imgObj.height
+                        originalHeight: imgObj.height,
+                        rawImageUrl: url
                     };
 
-                    createThumbnailElement(uniqueId, url);
+                    createThumbnailElement(uniqueId);
+                    renderThumbnail(uniqueId);
                     resolve();
                 };
                 imgObj.src = url;
             });
         }
 
-        function createThumbnailElement(id, imageUrl) {
+        function createThumbnailElement(id) {
             const div = document.createElement('div');
-            div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition';
+            div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition-transform';
             div.dataset.id = id;
 
             const imgContainer = document.createElement('div');
-            // A proporção (aspect-ratio) não é mais chumbada aqui; ela é gerenciada pela função updateThumbnailsOrientation
             imgContainer.className = 'canvas-container w-full bg-white rounded-lg overflow-hidden flex items-center justify-center transition-all duration-300 shadow-inner';
             
             const img = document.createElement('img');
-            img.src = imageUrl;
-            img.className = 'max-w-full max-h-full object-contain pointer-events-none transition-transform duration-300';
+            img.className = 'thumb-img max-w-full max-h-full object-contain pointer-events-none';
+            // O source (src) é injetado pelo renderThumbnail() logo na sequência
             
             imgContainer.appendChild(img);
 
@@ -330,9 +369,8 @@
             
             rotateBtn.onclick = (e) => {
                 e.stopPropagation();
-                let currentRot = pagesData[id].rotation;
-                pagesData[id].rotation = (currentRot + 90) % 360;
-                updateThumbnailsOrientation();
+                pagesData[id].rotation = (pagesData[id].rotation + 90) % 360;
+                renderThumbnail(id);
             };
 
             const deleteBtn = document.createElement('button');
@@ -447,9 +485,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Service Worker registrado!', reg);
-                }).catch(err => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
                     console.log('Falha ao registrar Service Worker', err);
                 });
             });
