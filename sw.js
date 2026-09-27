@@ -1,10 +1,11 @@
-const CACHE_NAME = 'pdf-workspace-v1';
+const CACHE_NAME = 'pdf-workspace-v2';
 const ASSETS = [
+  './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icon-512.png'
 ];
 
-// Instalação: Guarda os arquivos básicos no cache
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -13,17 +14,14 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Intercepta as requisições
 self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((response) => {
-      // Retorna do cache se encontrar, senão vai para a rede
       return response || fetch(e.request);
     })
   );
 });
 
-// Atualiza o cache se a versão mudar
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
