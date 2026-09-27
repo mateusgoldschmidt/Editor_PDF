@@ -39,27 +39,54 @@
 <body class="h-screen flex flex-col font-sans">
 
     <!-- Header / Barra de Ferramentas -->
-    <header class="bg-slate-800 border-b border-slate-700 p-4 flex flex-wrap justify-between items-center gap-4 shadow-md z-10">
-        <div class="flex items-center gap-2">
-            <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
-            <h1 class="text-xl font-bold tracking-wide">PDF<span class="text-slate-400 font-light">Workspace</span></h1>
-        </div>
+    <header class="bg-slate-800 border-b border-slate-700 p-4 flex flex-col gap-4 shadow-md z-10">
         
-        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <label class="flex-1 sm:flex-none cursor-pointer bg-slate-700 hover:bg-slate-600 transition text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Adicionar
-                <input type="file" id="fileInput" multiple accept=".pdf, image/png, image/jpeg" class="hidden">
-            </label>
+        <!-- Linha 1: Título e Nome do Arquivo -->
+        <div class="flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                <h1 class="text-xl font-bold tracking-wide">PDF<span class="text-slate-400 font-light">Workspace</span></h1>
+            </div>
             
-            <button id="clearBtn" class="flex-1 sm:flex-none bg-slate-800 border border-slate-600 hover:bg-slate-700 transition text-slate-300 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
-                Limpar
-            </button>
+            <div class="flex items-center gap-2 w-full sm:w-auto bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-600 focus-within:border-blue-500 transition">
+                <span class="text-sm text-slate-400 hidden sm:block">Nome:</span>
+                <input type="text" id="fileNameInput" value="Documento_Modificado" class="flex-1 bg-transparent text-white focus:outline-none text-sm w-full sm:w-48 placeholder-slate-500" placeholder="Digite o nome do arquivo">
+                <span class="text-slate-400 font-medium text-sm">.pdf</span>
+            </div>
+        </div>
+
+        <!-- Linha 2: Controles de Orientação e Botões -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
             
-            <button id="downloadBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 transition text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/50">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Baixar Novo PDF
-            </button>
+            <div class="w-full sm:w-auto">
+                <select id="pageFormat" class="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none transition cursor-pointer">
+                    <option value="auto">Folhas: Orientação Automática</option>
+                    <option value="portrait">Forçar Folhas: Retrato (A4)</option>
+                    <option value="landscape">Forçar Folhas: Paisagem (A4)</option>
+                </select>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button id="rotateAllBtn" class="flex-1 sm:flex-none bg-slate-700 hover:bg-slate-600 transition text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Girar Todas
+                </button>
+
+                <label class="flex-1 sm:flex-none cursor-pointer bg-slate-700 hover:bg-slate-600 transition text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Adicionar
+                    <input type="file" id="fileInput" multiple accept=".pdf, image/png, image/jpeg" class="hidden">
+                </label>
+                
+                <button id="clearBtn" class="flex-1 sm:flex-none bg-slate-800 border border-slate-600 hover:bg-slate-700 transition text-slate-300 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                    Limpar
+                </button>
+                
+                <button id="downloadBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 transition text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Baixar PDF
+                </button>
+            </div>
         </div>
     </header>
 
@@ -97,6 +124,9 @@
         const loadingText = document.getElementById('loadingText');
         const downloadBtn = document.getElementById('downloadBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const rotateAllBtn = document.getElementById('rotateAllBtn');
+        const fileNameInput = document.getElementById('fileNameInput');
+        const pageFormatSelect = document.getElementById('pageFormat');
 
         new Sortable(grid, {
             animation: 150,
@@ -108,6 +138,23 @@
         fileInput.addEventListener('change', handleFiles);
         clearBtn.addEventListener('click', clearAll);
         downloadBtn.addEventListener('click', generateFinalPDF);
+        
+        rotateAllBtn.addEventListener('click', () => {
+            const items = document.querySelectorAll('.page-item');
+            if(items.length === 0) return;
+            
+            items.forEach(item => {
+                const id = item.dataset.id;
+                let currentRot = pagesData[id].rotation;
+                currentRot = (currentRot + 90) % 360;
+                pagesData[id].rotation = currentRot;
+                
+                const img = item.querySelector('img');
+                const isLandscape = currentRot === 90 || currentRot === 270;
+                const scale = isLandscape ? 0.707 : 1;
+                img.style.transform = `rotate(${currentRot}deg) scale(${scale})`;
+            });
+        });
 
         function showLoading(text) {
             loadingText.innerText = text;
@@ -212,11 +259,9 @@
             div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition';
             div.dataset.id = id;
 
-            // O container mantém a proporção fixa sem se alterar
             const imgContainer = document.createElement('div');
             imgContainer.className = 'w-full aspect-[1/1.414] bg-white rounded-lg overflow-hidden flex items-center justify-center';
             
-            // A transição agora ocorre diretamente na imagem
             const img = document.createElement('img');
             img.src = imageUrl;
             img.className = 'max-w-full max-h-full object-contain pointer-events-none transition-transform duration-300';
@@ -236,8 +281,6 @@
                 currentRot = (currentRot + 90) % 360;
                 pagesData[id].rotation = currentRot;
                 
-                // Compensa a distorção do container quando a imagem rotaciona
-                // Fator A4 invertido (1 / 1.414 = ~0.707) previne que a imagem vaze
                 const isLandscape = currentRot === 90 || currentRot === 270;
                 const scale = isLandscape ? 0.707 : 1;
                 
@@ -273,6 +316,7 @@
                 const mergedPdf = await PDFDocument.create();
                 
                 const pdfCache = {};
+                const globalFormat = pageFormatSelect.value;
 
                 for (const item of items) {
                     const id = item.dataset.id;
@@ -301,14 +345,22 @@
                             img = await mergedPdf.embedPng(data.bytes);
                         }
 
-                        // Cria uma página em tamanho padrão A4 para padronizar as imagens
-                        const page = mergedPdf.addPage(PageSizes.A4);
+                        // Lógica inteligente de orientação do papel
+                        let paperDims;
+                        if (globalFormat === 'portrait') {
+                            paperDims = PageSizes.A4; // Força Retrato
+                        } else if (globalFormat === 'landscape') {
+                            paperDims = [PageSizes.A4[1], PageSizes.A4[0]]; // Força Paisagem
+                        } else {
+                            // Automático: Papel paisagem se a foto for mais larga que alta
+                            paperDims = (img.width > img.height) ? [PageSizes.A4[1], PageSizes.A4[0]] : PageSizes.A4;
+                        }
+
+                        const page = mergedPdf.addPage(paperDims);
                         const { width, height } = page.getSize();
                         
-                        // Calcula proporção para a imagem caber no A4 perfeitamente sem deformar
                         const imgDims = img.scaleToFit(width, height);
 
-                        // Desenha a imagem centralizada no meio da página A4
                         page.drawImage(img, {
                             x: width / 2 - imgDims.width / 2,
                             y: height / 2 - imgDims.height / 2,
@@ -316,7 +368,6 @@
                             height: imgDims.height,
                         });
                         
-                        // Se houver rotação definida, gira a página
                         page.setRotation(degrees(data.rotation));
                     }
                 }
@@ -326,9 +377,13 @@
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
                 
+                // Define o nome do arquivo com base no input (remove espaços extras)
+                let customName = fileNameInput.value.trim();
+                if(!customName) customName = "Documento_Workspace";
+                
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'Documento_Modificado.pdf';
+                a.download = `${customName}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 
