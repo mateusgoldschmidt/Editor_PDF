@@ -23,14 +23,13 @@
     <style>
         body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
         .page-item {
-            touch-action: none; /* Melhora o drag and drop no mobile */
+            touch-action: none; 
             transition: transform 0.2s;
         }
         .page-item.sortable-ghost { opacity: 0.4; transform: scale(0.95); }
         .canvas-container {
             transition: transform 0.3s ease;
         }
-        /* Esconde a barra de rolagem mas permite rolar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -64,18 +63,16 @@
         </div>
     </header>
 
-    <!-- Área de Trabalho (Mesa de Luz) -->
+    <!-- Área de Trabalho -->
     <main class="flex-1 p-6 overflow-y-auto bg-slate-900 relative">
-        <!-- Estado Vazio -->
         <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none transition-opacity duration-300">
             <svg class="w-20 h-20 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <p class="text-lg">Adicione PDFs ou Imagens para começar</p>
             <p class="text-sm opacity-70 mt-1">Você pode reordenar arrastando as páginas</p>
         </div>
 
-        <!-- Grid de Miniaturas -->
         <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20">
-            <!-- As miniaturas serão injetadas aqui pelo JS -->
+            <!-- Miniaturas -->
         </div>
     </main>
 
@@ -88,14 +85,11 @@
     </div>
 
     <script>
-        // Configuração do PDF.js (usando worker via CDN)
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Banco de dados em memória para guardar os arquivos reais
         const pagesData = {}; 
         let fileIdCounter = 0;
 
-        // Elementos DOM
         const fileInput = document.getElementById('fileInput');
         const grid = document.getElementById('grid');
         const emptyState = document.getElementById('emptyState');
@@ -104,15 +98,13 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const clearBtn = document.getElementById('clearBtn');
 
-        // Inicializa o arrastar e soltar (Drag and Drop) para mobile e desktop
         new Sortable(grid, {
             animation: 150,
             ghostClass: 'sortable-ghost',
-            delay: 150, // Delay ajuda no touch do celular
+            delay: 150, 
             delayOnTouchOnly: true
         });
 
-        // Event Listeners
         fileInput.addEventListener('change', handleFiles);
         clearBtn.addEventListener('click', clearAll);
         downloadBtn.addEventListener('click', generateFinalPDF);
@@ -163,13 +155,11 @@
 
             hideLoading();
             updateEmptyState();
-            fileInput.value = ''; // Reseta o input
+            fileInput.value = '';
         }
 
         async function processPDF(bytes, fileId) {
             try {
-                // Passamos bytes.slice() para garantir que o PDF.js não "sequestre" (detach)
-                // o buffer original, mantendo-o intacto para o pdf-lib usar depois.
                 const pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
                 
                 for (let i = 1; i <= pdf.numPages; i++) {
@@ -188,7 +178,7 @@
                     pagesData[uniqueId] = {
                         type: 'pdf',
                         fileId: fileId,
-                        bytes: bytes, // Mantemos o buffer original seguro
+                        bytes: bytes, 
                         pageIndex: i - 1,
                         rotation: 0
                     };
@@ -222,12 +212,14 @@
             div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition';
             div.dataset.id = id;
 
+            // O container mantém a proporção fixa sem se alterar
             const imgContainer = document.createElement('div');
-            imgContainer.className = 'canvas-container w-full aspect-[1/1.414] bg-white rounded-lg overflow-hidden flex items-center justify-center';
+            imgContainer.className = 'w-full aspect-[1/1.414] bg-white rounded-lg overflow-hidden flex items-center justify-center';
             
+            // A transição agora ocorre diretamente na imagem
             const img = document.createElement('img');
             img.src = imageUrl;
-            img.className = 'max-w-full max-h-full object-contain pointer-events-none';
+            img.className = 'max-w-full max-h-full object-contain pointer-events-none transition-transform duration-300';
             
             imgContainer.appendChild(img);
 
@@ -237,12 +229,19 @@
             const rotateBtn = document.createElement('button');
             rotateBtn.className = 'w-9 h-9 bg-slate-900/90 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow backdrop-blur-sm transition';
             rotateBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>`;
+            
             rotateBtn.onclick = (e) => {
                 e.stopPropagation();
                 let currentRot = pagesData[id].rotation;
                 currentRot = (currentRot + 90) % 360;
                 pagesData[id].rotation = currentRot;
-                imgContainer.style.transform = `rotate(${currentRot}deg)`;
+                
+                // Compensa a distorção do container quando a imagem rotaciona
+                // Fator A4 invertido (1 / 1.414 = ~0.707) previne que a imagem vaze
+                const isLandscape = currentRot === 90 || currentRot === 270;
+                const scale = isLandscape ? 0.707 : 1;
+                
+                img.style.transform = `rotate(${currentRot}deg) scale(${scale})`;
             };
 
             const deleteBtn = document.createElement('button');
@@ -270,7 +269,7 @@
             showLoading('Gerando PDF Final...');
 
             try {
-                const { PDFDocument, degrees } = window.PDFLib;
+                const { PDFDocument, degrees, PageSizes } = window.PDFLib;
                 const mergedPdf = await PDFDocument.create();
                 
                 const pdfCache = {};
@@ -282,14 +281,12 @@
                     if (data.type === 'pdf') {
                         let srcDoc = pdfCache[data.fileId];
                         if (!srcDoc) {
-                            // ignoreEncryption evita falhas com PDFs que possuem travas básicas de segurança
                             srcDoc = await PDFDocument.load(data.bytes, { ignoreEncryption: true });
                             pdfCache[data.fileId] = srcDoc;
                         }
 
                         const [copiedPage] = await mergedPdf.copyPages(srcDoc, [data.pageIndex]);
                         
-                        // Busca a rotação original de forma segura (previne falhas se a página não possuir a tag de ângulo)
                         const originalRotationInfo = copiedPage.getRotation();
                         const baseRotation = (originalRotationInfo && originalRotationInfo.angle) ? originalRotationInfo.angle : 0;
                         
@@ -304,14 +301,22 @@
                             img = await mergedPdf.embedPng(data.bytes);
                         }
 
-                        const page = mergedPdf.addPage([img.width, img.height]);
+                        // Cria uma página em tamanho padrão A4 para padronizar as imagens
+                        const page = mergedPdf.addPage(PageSizes.A4);
+                        const { width, height } = page.getSize();
+                        
+                        // Calcula proporção para a imagem caber no A4 perfeitamente sem deformar
+                        const imgDims = img.scaleToFit(width, height);
+
+                        // Desenha a imagem centralizada no meio da página A4
                         page.drawImage(img, {
-                            x: 0,
-                            y: 0,
-                            width: img.width,
-                            height: img.height,
+                            x: width / 2 - imgDims.width / 2,
+                            y: height / 2 - imgDims.height / 2,
+                            width: imgDims.width,
+                            height: imgDims.height,
                         });
                         
+                        // Se houver rotação definida, gira a página
                         page.setRotation(degrees(data.rotation));
                     }
                 }
@@ -334,14 +339,12 @@
 
             } catch (error) {
                 console.error("Erro ao gerar PDF:", error);
-                // Adicionado error.message para facilitar o debug caso ocorra outra exceção inesperada
                 alert("Ocorreu um erro ao gerar o PDF final: " + error.message);
             }
 
             hideLoading();
         }
 
-        // PWA - Registro do Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').then(reg => {
