@@ -27,10 +27,6 @@
         }
         .page-item.sortable-ghost { opacity: 0.4; transform: scale(0.95); }
         
-        /* Aspect Ratios Perfeitos baseados na folha A4 */
-        .aspect-portrait { aspect-ratio: 1 / 1.414; }
-        .aspect-landscape { aspect-ratio: 1.414 / 1; }
-        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -95,7 +91,6 @@
             <p class="text-sm opacity-70 mt-1">Você pode reordenar arrastando as páginas</p>
         </div>
 
-        <!-- O class 'items-start' foi adicionado aqui para evitar que as caixas estiquem -->
         <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20 items-start">
             <!-- Miniaturas -->
         </div>
@@ -153,7 +148,7 @@
             });
         });
 
-        // Função responsável por pré-renderizar a miniatura de forma 100% perfeita
+        // Matemática Perfeita de Rotação e Escala
         function renderThumbnail(id) {
             const data = pagesData[id];
             if (!data) return;
@@ -161,34 +156,38 @@
             const format = pageFormatSelect.value;
             const rot = data.rotation || 0;
 
-            let paperW, paperH;
+            let viewW, viewH;
+            let pageW, pageH;
             const A4_W = 595.28, A4_H = 841.89;
 
+            const isRotated90 = (rot === 90 || rot === 270);
+
             if (data.type === 'pdf') {
-                paperW = data.originalWidth;
-                paperH = data.originalHeight;
+                pageW = data.originalWidth;
+                pageH = data.originalHeight;
+                viewW = isRotated90 ? pageH : pageW;
+                viewH = isRotated90 ? pageW : pageH;
             } else {
+                // Dimensões Finais de Visualização da Folha
                 if (format === 'portrait') {
-                    paperW = A4_W; paperH = A4_H;
+                    viewW = A4_W; viewH = A4_H;
                 } else if (format === 'landscape') {
-                    paperW = A4_H; paperH = A4_W;
+                    viewW = A4_H; viewH = A4_W;
                 } else {
-                    if (data.originalWidth > data.originalHeight) {
-                        paperW = A4_H; paperH = A4_W;
-                    } else {
-                        paperW = A4_W; paperH = A4_H;
-                    }
+                    const rotImgW = isRotated90 ? data.originalHeight : data.originalWidth;
+                    const rotImgH = isRotated90 ? data.originalWidth : data.originalHeight;
+                    viewW = rotImgW > rotImgH ? A4_H : A4_W;
+                    viewH = rotImgW > rotImgH ? A4_W : A4_H;
                 }
+                // Dimensões de Criação Física da Folha (Compensando o giro da página)
+                pageW = isRotated90 ? viewH : viewW;
+                pageH = isRotated90 ? viewW : viewH;
             }
 
-            const isRotated90 = rot === 90 || rot === 270;
-            const finalW = isRotated90 ? paperH : paperW;
-            const finalH = isRotated90 ? paperW : paperH;
-
             const canvas = document.createElement('canvas');
-            const thumbScale = 400 / Math.max(finalW, finalH);
-            canvas.width = finalW * thumbScale;
-            canvas.height = finalH * thumbScale;
+            const thumbScale = 400 / Math.max(viewW, viewH);
+            canvas.width = viewW * thumbScale;
+            canvas.height = viewH * thumbScale;
             const ctx = canvas.getContext('2d');
 
             ctx.fillStyle = '#ffffff';
@@ -201,9 +200,10 @@
                 ctx.rotate((rot * Math.PI) / 180);
 
                 if (data.type === 'pdf') {
-                    ctx.drawImage(img, -(paperW * thumbScale) / 2, -(paperH * thumbScale) / 2, paperW * thumbScale, paperH * thumbScale);
+                    ctx.drawImage(img, -(pageW * thumbScale) / 2, -(pageH * thumbScale) / 2, pageW * thumbScale, pageH * thumbScale);
                 } else {
-                    const scaleFactor = Math.min(paperW / data.originalWidth, paperH / data.originalHeight);
+                    // Aqui a mágica acontece: a imagem é dimensionada sobre a folha bruta, ignorando o giro final!
+                    const scaleFactor = Math.min(pageW / data.originalWidth, pageH / data.originalHeight);
                     const drawW = data.originalWidth * scaleFactor * thumbScale;
                     const drawH = data.originalHeight * scaleFactor * thumbScale;
                     ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
@@ -216,8 +216,7 @@
                     uiImg.src = canvas.toDataURL('image/jpeg', 0.9);
                     
                     const container = item.querySelector('.canvas-container');
-                    container.classList.remove('aspect-portrait', 'aspect-landscape');
-                    container.classList.add(finalW > finalH ? 'aspect-landscape' : 'aspect-portrait');
+                    container.style.aspectRatio = `${viewW} / ${viewH}`;
                 }
             };
             img.src = data.rawImageUrl; 
@@ -338,7 +337,6 @@
         }
 
         function createThumbnailElement(id) {
-            // A classe 'transition-all duration-300' foi adicionada aqui para a animação do fundo escuro
             const div = document.createElement('div');
             div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition-all duration-300';
             div.dataset.id = id;
@@ -422,28 +420,37 @@
                             img = await mergedPdf.embedPng(data.bytes);
                         }
 
-                        let paperDims;
+                        const rot = data.rotation || 0;
+                        const isRotated90 = (rot === 90 || rot === 270);
+
+                        let viewW, viewH;
                         if (globalFormat === 'portrait') {
-                            paperDims = PageSizes.A4; 
+                            viewW = PageSizes.A4[0]; 
+                            viewH = PageSizes.A4[1];
                         } else if (globalFormat === 'landscape') {
-                            paperDims = [PageSizes.A4[1], PageSizes.A4[0]]; 
+                            viewW = PageSizes.A4[1]; 
+                            viewH = PageSizes.A4[0];
                         } else {
-                            paperDims = (img.width > img.height) ? [PageSizes.A4[1], PageSizes.A4[0]] : PageSizes.A4;
+                            const rotImgW = isRotated90 ? img.height : img.width;
+                            const rotImgH = isRotated90 ? img.width : img.height;
+                            viewW = rotImgW > rotImgH ? PageSizes.A4[1] : PageSizes.A4[0];
+                            viewH = rotImgW > rotImgH ? PageSizes.A4[0] : PageSizes.A4[1];
                         }
 
-                        const page = mergedPdf.addPage(paperDims);
-                        const { width, height } = page.getSize();
-                        
-                        const imgDims = img.scaleToFit(width, height);
+                        const pageW = isRotated90 ? viewH : viewW;
+                        const pageH = isRotated90 ? viewW : viewH;
+
+                        const page = mergedPdf.addPage([pageW, pageH]);
+                        const imgDims = img.scaleToFit(pageW, pageH);
 
                         page.drawImage(img, {
-                            x: width / 2 - imgDims.width / 2,
-                            y: height / 2 - imgDims.height / 2,
+                            x: pageW / 2 - imgDims.width / 2,
+                            y: pageH / 2 - imgDims.height / 2,
                             width: imgDims.width,
                             height: imgDims.height,
                         });
                         
-                        page.setRotation(degrees(data.rotation));
+                        page.setRotation(degrees(rot));
                     }
                 }
 
