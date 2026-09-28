@@ -37,6 +37,7 @@
 
     <!-- Header / Barra de Ferramentas -->
     <header class="bg-slate-800 border-b border-slate-700 p-4 flex flex-col gap-4 shadow-md z-10">
+        
         <div class="flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-2">
                 <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
@@ -50,36 +51,26 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="w-full sm:w-auto">
-                <select id="pageFormat" class="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none transition cursor-pointer">
-                    <option value="auto">Imagens: Orientação Automática</option>
-                    <option value="portrait">Forçar Imagens: Retrato (A4)</option>
-                    <option value="landscape">Forçar Imagens: Paisagem (A4)</option>
-                </select>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <button id="rotateAllBtn" class="flex-1 sm:flex-none bg-slate-700 hover:bg-slate-600 transition text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Girar Todas
-                </button>
+        <div class="flex flex-wrap items-center justify-end gap-3 w-full">
+            <button id="rotateAllBtn" class="flex-1 sm:flex-none bg-slate-700 hover:bg-slate-600 transition text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Girar Todas
+            </button>
 
-                <label class="flex-1 sm:flex-none cursor-pointer bg-slate-700 hover:bg-slate-600 transition text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Adicionar
-                    <input type="file" id="fileInput" multiple accept=".pdf, image/png, image/jpeg" class="hidden">
-                </label>
-                
-                <button id="clearBtn" class="flex-1 sm:flex-none bg-slate-800 border border-slate-600 hover:bg-slate-700 transition text-slate-300 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
-                    Limpar
-                </button>
-                
-                <button id="downloadBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 transition text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/50">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Baixar PDF
-                </button>
-            </div>
+            <label class="flex-1 sm:flex-none cursor-pointer bg-slate-700 hover:bg-slate-600 transition text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Adicionar
+                <input type="file" id="fileInput" multiple accept=".pdf, image/png, image/jpeg" class="hidden">
+            </label>
+            
+            <button id="clearBtn" class="flex-1 sm:flex-none bg-slate-800 border border-slate-600 hover:bg-slate-700 transition text-slate-300 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm">
+                Limpar
+            </button>
+            
+            <button id="downloadBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 transition text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/50">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Baixar PDF
+            </button>
         </div>
     </header>
 
@@ -119,7 +110,6 @@
         const clearBtn = document.getElementById('clearBtn');
         const rotateAllBtn = document.getElementById('rotateAllBtn');
         const fileNameInput = document.getElementById('fileNameInput');
-        const pageFormatSelect = document.getElementById('pageFormat');
 
         new Sortable(grid, {
             animation: 150,
@@ -133,10 +123,6 @@
         clearBtn.addEventListener('click', clearAll);
         downloadBtn.addEventListener('click', generateFinalPDF);
         
-        pageFormatSelect.addEventListener('change', () => {
-            Object.keys(pagesData).forEach(id => renderThumbnail(id));
-        });
-        
         rotateAllBtn.addEventListener('click', () => {
             const items = document.querySelectorAll('.page-item');
             if(items.length === 0) return;
@@ -148,38 +134,30 @@
             });
         });
 
+        // Matemática Perfeita de Rotação (Agora Totalmente Automática)
         function renderThumbnail(id) {
             const data = pagesData[id];
             if (!data) return;
             
-            const format = pageFormatSelect.value;
             const rot = data.rotation || 0;
+            const isRotated90 = (rot === 90 || rot === 270);
 
-            let viewW, viewH;
             let pageW, pageH;
             const A4_W = 595.28, A4_H = 841.89;
-
-            const isRotated90 = (rot === 90 || rot === 270);
 
             if (data.type === 'pdf') {
                 pageW = data.originalWidth;
                 pageH = data.originalHeight;
-                viewW = isRotated90 ? pageH : pageW;
-                viewH = isRotated90 ? pageW : pageH;
             } else {
-                if (format === 'portrait') {
-                    viewW = A4_W; viewH = A4_H;
-                } else if (format === 'landscape') {
-                    viewW = A4_H; viewH = A4_W;
-                } else {
-                    const rotImgW = isRotated90 ? data.originalHeight : data.originalWidth;
-                    const rotImgH = isRotated90 ? data.originalWidth : data.originalHeight;
-                    viewW = rotImgW > rotImgH ? A4_H : A4_W;
-                    viewH = rotImgW > rotImgH ? A4_W : A4_H;
-                }
-                pageW = isRotated90 ? viewH : viewW;
-                pageH = isRotated90 ? viewW : viewH;
+                // A Orientação da folha segue o formato original da foto
+                const isLandscape = data.originalWidth > data.originalHeight;
+                pageW = isLandscape ? A4_H : A4_W;
+                pageH = isLandscape ? A4_W : A4_H;
             }
+
+            // O tamanho visual final na tela (inverte altura e largura se estiver de lado)
+            const viewW = isRotated90 ? pageH : pageW;
+            const viewH = isRotated90 ? pageW : pageH;
 
             const canvas = document.createElement('canvas');
             const thumbScale = 400 / Math.max(viewW, viewH);
@@ -212,6 +190,7 @@
                     uiImg.src = canvas.toDataURL('image/jpeg', 0.9);
                     
                     const container = item.querySelector('.canvas-container');
+                    // Aplica a proporção diretamente para o "quadradinho preto" abraçar exatamente o conteúdo
                     container.style.aspectRatio = `${viewW} / ${viewH}`;
                 }
             };
@@ -334,7 +313,7 @@
 
         function createThumbnailElement(id) {
             const div = document.createElement('div');
-            // ADICIONADO AQUI: As classes 'h-fit', 'self-start' e 'w-full' forçam a miniatura a envolver apenas o conteúdo, sem esticar para imitar a altura dos itens vizinhos.
+            // 'h-fit' e 'self-start' forçam o quadradinho a não esticar na grade.
             div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition-all duration-300 h-fit self-start w-full';
             div.dataset.id = id;
 
@@ -388,7 +367,6 @@
                 const mergedPdf = await PDFDocument.create();
                 
                 const pdfCache = {};
-                const globalFormat = pageFormatSelect.value;
 
                 for (const item of items) {
                     const id = item.dataset.id;
@@ -417,37 +395,23 @@
                             img = await mergedPdf.embedPng(data.bytes);
                         }
 
-                        const rot = data.rotation || 0;
-                        const isRotated90 = (rot === 90 || rot === 270);
+                        // Cria a página no formato A4 ideal para o formato original da foto
+                        const isLandscape = img.width > img.height;
+                        const paperDims = isLandscape ? [PageSizes.A4[1], PageSizes.A4[0]] : PageSizes.A4;
 
-                        let viewW, viewH;
-                        if (globalFormat === 'portrait') {
-                            viewW = PageSizes.A4[0]; 
-                            viewH = PageSizes.A4[1];
-                        } else if (globalFormat === 'landscape') {
-                            viewW = PageSizes.A4[1]; 
-                            viewH = PageSizes.A4[0];
-                        } else {
-                            const rotImgW = isRotated90 ? img.height : img.width;
-                            const rotImgH = isRotated90 ? img.width : img.height;
-                            viewW = rotImgW > rotImgH ? PageSizes.A4[1] : PageSizes.A4[0];
-                            viewH = rotImgW > rotImgH ? PageSizes.A4[0] : PageSizes.A4[1];
-                        }
-
-                        const pageW = isRotated90 ? viewH : viewW;
-                        const pageH = isRotated90 ? viewW : viewH;
-
-                        const page = mergedPdf.addPage([pageW, pageH]);
-                        const imgDims = img.scaleToFit(pageW, pageH);
+                        const page = mergedPdf.addPage(paperDims);
+                        const { width, height } = page.getSize();
+                        
+                        const imgDims = img.scaleToFit(width, height);
 
                         page.drawImage(img, {
-                            x: pageW / 2 - imgDims.width / 2,
-                            y: pageH / 2 - imgDims.height / 2,
+                            x: width / 2 - imgDims.width / 2,
+                            y: height / 2 - imgDims.height / 2,
                             width: imgDims.width,
                             height: imgDims.height,
                         });
                         
-                        page.setRotation(degrees(rot));
+                        page.setRotation(degrees(data.rotation || 0));
                     }
                 }
 
