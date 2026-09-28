@@ -148,7 +148,6 @@
             });
         });
 
-        // Matemática Perfeita de Rotação e Escala
         function renderThumbnail(id) {
             const data = pagesData[id];
             if (!data) return;
@@ -168,7 +167,6 @@
                 viewW = isRotated90 ? pageH : pageW;
                 viewH = isRotated90 ? pageW : pageH;
             } else {
-                // Dimensões Finais de Visualização da Folha
                 if (format === 'portrait') {
                     viewW = A4_W; viewH = A4_H;
                 } else if (format === 'landscape') {
@@ -179,7 +177,6 @@
                     viewW = rotImgW > rotImgH ? A4_H : A4_W;
                     viewH = rotImgW > rotImgH ? A4_W : A4_H;
                 }
-                // Dimensões de Criação Física da Folha (Compensando o giro da página)
                 pageW = isRotated90 ? viewH : viewW;
                 pageH = isRotated90 ? viewW : viewH;
             }
@@ -202,7 +199,6 @@
                 if (data.type === 'pdf') {
                     ctx.drawImage(img, -(pageW * thumbScale) / 2, -(pageH * thumbScale) / 2, pageW * thumbScale, pageH * thumbScale);
                 } else {
-                    // Aqui a mágica acontece: a imagem é dimensionada sobre a folha bruta, ignorando o giro final!
                     const scaleFactor = Math.min(pageW / data.originalWidth, pageH / data.originalHeight);
                     const drawW = data.originalWidth * scaleFactor * thumbScale;
                     const drawH = data.originalHeight * scaleFactor * thumbScale;
@@ -338,7 +334,8 @@
 
         function createThumbnailElement(id) {
             const div = document.createElement('div');
-            div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition-all duration-300';
+            // ADICIONADO AQUI: As classes 'h-fit', 'self-start' e 'w-full' forçam a miniatura a envolver apenas o conteúdo, sem esticar para imitar a altura dos itens vizinhos.
+            div.className = 'page-item relative group cursor-move flex flex-col items-center bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-sm hover:shadow-md hover:border-slate-500 transition-all duration-300 h-fit self-start w-full';
             div.dataset.id = id;
 
             const imgContainer = document.createElement('div');
