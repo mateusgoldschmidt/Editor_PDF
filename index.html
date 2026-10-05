@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     
     <style>
-        body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; overscroll-behavior-y: none; }
+        body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
         .page-item { touch-action: none; transition: all 0.2s; }
         .page-item.selected { box-shadow: 0 0 0 4px #3b82f6; border-color: #3b82f6; transform: scale(0.98); }
         .page-item.sortable-ghost { opacity: 0.4; transform: scale(0.95); }
@@ -59,7 +59,7 @@
             </div>
             
             <div class="flex items-center gap-2 w-full sm:w-auto bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-600 focus-within:border-blue-500 transition">
-                <span class="text-sm text-slate-400 hidden sm:block">Arquivo Final:</span>
+                <span class="text-sm text-slate-400 hidden sm:block">Nome:</span>
                 <input type="text" id="fileNameInput" value="Documento_Workspace" class="flex-1 bg-transparent text-white focus:outline-none text-sm w-full sm:w-48 placeholder-slate-500">
                 <span class="text-slate-400 font-medium text-sm">.pdf</span>
             </div>
@@ -131,7 +131,7 @@
         <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none transition-opacity duration-300">
             <svg class="w-20 h-20 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <p class="text-lg">Adicione PDFs ou Imagens</p>
-            <p class="text-sm opacity-70 mt-1">Você pode soltar arquivos em qualquer lugar da tela</p>
+            <p class="text-sm opacity-70 mt-1">Pode soltar os ficheiros em qualquer lugar do ecrã</p>
         </div>
 
         <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20 items-start">
@@ -153,13 +153,13 @@
     </div>
 
     <!-- Modal Zoom Tela Cheia -->
-    <div id="zoomModal" class="modal fixed inset-0 bg-black/95 flex items-center justify-center p-4">
+    <div id="zoomModal" class="modal fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[200]">
         <button onclick="closeZoom()" class="absolute top-4 right-4 text-white bg-slate-800 hover:bg-red-600 rounded-full p-2 w-10 h-10 flex items-center justify-center transition z-10">&times;</button>
         <img id="zoomImg" src="" class="max-w-full max-h-full object-contain rounded shadow-2xl">
     </div>
 
     <!-- Modal Crop Tool -->
-    <div id="cropModal" class="modal fixed inset-0 bg-slate-900/95 flex items-center justify-center p-4">
+    <div id="cropModal" class="modal fixed inset-0 bg-slate-900/95 flex items-center justify-center p-4 z-[200]">
         <div class="bg-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col gap-4">
             <h3 class="text-white text-lg font-bold flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path></svg>
@@ -191,7 +191,7 @@
     <iframe id="printFrame" class="hidden"></iframe>
 
     <script>
-        // TRUQUE PARA EVITAR O BUG DO MARKDOWN NO CHAT: A URL do script é dividida para evitar auto-link
+        // Divisão da string para não quebrar a URL em alguns editores de código/markdown
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare' + '.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         const pagesData = {}; 
@@ -199,7 +199,6 @@
         let selectedIds = new Set();
         let currentCropId = null;
 
-        // Referências DOM
         const grid = document.getElementById('grid');
         const emptyState = document.getElementById('emptyState');
         const fileInput = document.getElementById('fileInput');
@@ -209,7 +208,6 @@
         const selCountText = document.getElementById('selCountText');
         const dropzone = document.getElementById('dropzone');
 
-        // Inicializa Drag and Drop Reordenar
         new Sortable(grid, {
             animation: 150,
             ghostClass: 'sortable-ghost',
@@ -217,18 +215,45 @@
             delayOnTouchOnly: true
         });
 
-        // Eventos Globais de Drag and Drop Arquivos
-        window.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('active'); });
-        window.addEventListener('dragleave', (e) => { 
-            if(e.target === dropzone || e.relatedTarget === null) dropzone.classList.remove('active'); 
+        // ==========================================
+        // CORREÇÃO DO DRAG AND DROP (Evitar a "janela presa")
+        // ==========================================
+        let dragCounter = 0;
+        window.addEventListener('dragenter', (e) => {
+            // Só mostra a janela azul se o item arrastado for um FICHEIRO REAL
+            if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+                e.preventDefault();
+                dragCounter++;
+                dropzone.classList.add('active');
+            }
+        });
+        window.addEventListener('dragover', (e) => {
+            if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('dragleave', (e) => {
+            if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+                dragCounter--;
+                if (dragCounter <= 0) {
+                    dragCounter = 0;
+                    dropzone.classList.remove('active');
+                }
+            }
         });
         window.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.classList.remove('active');
-            if (e.dataTransfer.files.length) handleFiles({ target: { files: e.dataTransfer.files } });
+            if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+                e.preventDefault();
+                dragCounter = 0;
+                dropzone.classList.remove('active');
+                if (e.dataTransfer.files.length) handleFiles({ target: { files: e.dataTransfer.files } });
+            } else {
+                // Prevenção extra
+                dragCounter = 0;
+                dropzone.classList.remove('active');
+            }
         });
 
-        // Lógica de Seleção Mode
         let selectionModeActive = false;
         document.getElementById('selectionModeBtn').addEventListener('click', () => {
             selectionModeActive = !selectionModeActive;
@@ -243,11 +268,9 @@
             }
         });
 
-        // Eventos de Botões
         fileInput.addEventListener('change', handleFiles);
         document.getElementById('clearBtn').addEventListener('click', clearAll);
 
-        // Lógica de Seleção
         function toggleSelection(id, element) {
             if (selectedIds.has(id)) {
                 selectedIds.delete(id);
@@ -284,7 +307,6 @@
             updateEmptyState();
         }
 
-        // Modais de Tela Cheia e Imagem
         function openZoom(id) {
             document.getElementById('zoomImg').src = pagesData[id].rawImageUrl;
             document.getElementById('zoomModal').classList.add('active');
@@ -298,7 +320,6 @@
             a.click();
         }
 
-        // Crop Tool Modais e Sliders
         const cropInputs = ['T', 'B', 'L', 'R'];
         cropInputs.forEach(d => {
             document.getElementById(`crop${d}`).addEventListener('input', (e) => {
@@ -340,7 +361,6 @@
             closeCrop();
         }
 
-        // Sistema Principal Visual (Renderização)
         function renderThumbnail(id) {
             const data = pagesData[id];
             if (!data) return;
@@ -349,7 +369,6 @@
             const c = data.crop;
             const isRotated90 = (rot === 90 || rot === 270);
 
-            // Ajusta dimensões pelo crop percentual
             const cropW = data.originalWidth * (1 - (c.l + c.r)/100);
             const cropH = data.originalHeight * (1 - (c.t + c.b)/100);
 
@@ -381,7 +400,6 @@
                 ctx.translate(canvas.width / 2, canvas.height / 2);
                 ctx.rotate((rot * Math.PI) / 180);
 
-                // Aplica o crop fisicamente no desenho do canvas
                 const sourceX = data.originalWidth * (c.l/100);
                 const sourceY = data.originalHeight * (c.t/100);
                 const sourceW = cropW;
@@ -406,7 +424,6 @@
             img.src = data.rawImageUrl; 
         }
 
-        // Leitura de Arquivos
         async function handleFiles(e) {
             const files = e.target.files;
             if (files.length === 0) return;
@@ -434,7 +451,7 @@
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const viewportReal = page.getViewport({ scale: 1.0 });
-                    const viewportThumb = page.getViewport({ scale: 1.5 }); // Escala boa para zoom depois
+                    const viewportThumb = page.getViewport({ scale: 1.5 }); 
                     
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
@@ -477,7 +494,6 @@
                 }
             };
 
-            // Divisor Visual (Nome do Arquivo na primeira página)
             let dividerHtml = '';
             if (dividerName) {
                 dividerHtml = `<div class="absolute -top-3 left-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full shadow z-20 whitespace-nowrap overflow-hidden max-w-[90%] text-ellipsis" title="${dividerName}">${dividerName}</div>`;
@@ -489,7 +505,6 @@
             img.className = 'thumb-img max-w-full max-h-full object-contain';
             imgContainer.appendChild(img);
 
-            // Ações sobre a miniatura (Zoom, Imagem, Crop, Girar, Lixeira)
             const actions = document.createElement('div');
             actions.className = 'absolute top-2 right-2 flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10';
             
@@ -505,23 +520,30 @@
             div.appendChild(imgContainer);
             div.appendChild(actions);
             
-            // Checkbox visual customizado
+            // Checkbox visual para o modo de seleção
             const checkbox = document.createElement('div');
-            checkbox.className = 'custom-checkbox absolute bottom-2 left-2 z-10 group-[.selected]:checked';
-            checkbox.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+            checkbox.className = 'custom-checkbox absolute bottom-2 left-2 z-10 hidden group-[.selected]:flex bg-blue-500 border-blue-500 text-white w-5 h-5 rounded items-center justify-center';
+            if (selectionModeActive) checkbox.classList.remove('hidden'); // Exibe se o modo já estiver ativo
+            checkbox.innerHTML = '✓';
             div.appendChild(checkbox);
 
             grid.appendChild(div);
             renderThumbnail(uniqueId);
         }
 
-        // Utils
+        // Correção visual do checkbox ao ativar/desativar modo
+        document.getElementById('selectionModeBtn').addEventListener('click', () => {
+             document.querySelectorAll('.custom-checkbox').forEach(cb => {
+                 if (selectionModeActive) cb.classList.replace('hidden', 'flex');
+                 else cb.classList.replace('flex', 'hidden');
+             });
+        });
+
         function showLoading(text) { loadingText.innerText = text; loading.classList.remove('hidden'); loading.classList.add('flex'); }
         function hideLoading() { loading.classList.add('hidden'); loading.classList.remove('flex'); }
         function updateEmptyState() { emptyState.style.opacity = grid.children.length === 0 ? '1' : '0'; }
         function clearAll() { grid.innerHTML = ''; for (let p in pagesData) delete pagesData[p]; selectedIds.clear(); updateSelectionBar(); fileInput.value = ''; updateEmptyState(); }
 
-        // O Coração da Exportação: Gera PDF, Imprime, Compartilha ou Extrai
         async function executeAction(actionType, extractOnly = false) {
             let items = Array.from(document.querySelectorAll('.page-item'));
             if (extractOnly) {
@@ -597,7 +619,6 @@
                     }
                 }
 
-                // Lógica Agrupamento (N-Up: 2 ou 4)
                 if (nUp > 1 && embeddedPagesList.length > 0) {
                     const A4 = PageSizes.A4; 
                     const sheetW = nUp === 2 ? A4[1] : A4[0]; 
@@ -644,7 +665,6 @@
                     }
                 }
 
-                // Geração Final do Arquivo
                 const pdfBytes = await mergedPdf.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
